@@ -3,7 +3,7 @@ process FASTCAT {
     label 'process_low'
 
     conda "nanoporetech::fastcat=0.20.0"
-    container "docker://ontresearch/wf-common:shad28e55140f75a68f59bbecc74e880aeab16ab158"
+    container "ontresearch/wf-common:shad28e55140f75a68f59bbecc74e880aeab16ab158"
 
     input:
     tuple val(meta), path(fastq_input)

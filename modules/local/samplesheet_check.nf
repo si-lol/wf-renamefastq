@@ -2,7 +2,7 @@ process SAMPLESHEET_CHECK {
     label 'process_low'
 
     conda "conda-forge::python=3.9.5"
-    container "docker://ontresearch/wf-common:shad28e55140f75a68f59bbecc74e880aeab16ab158"
+    container "ontresearch/wf-common:shad28e55140f75a68f59bbecc74e880aeab16ab158"
 
     input:
     path(samplesheet)
