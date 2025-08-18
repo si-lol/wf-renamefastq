@@ -8,7 +8,7 @@
 [![run with singularity](https://img.shields.io/badge/run%20with-singularity-1d355c.svg?labelColor=000000)](https://sylabs.io/docs/)
 [![Launch on Seqera Platform](https://img.shields.io/badge/Launch%20%F0%9F%9A%80-Seqera%20Platform-%234256e7)](https://cloud.seqera.io/launch?pipeline=https://github.com/wf/renamefastq) -->
 
-<img src="docs/images/silol-logo.png" width="400">
+<img src="docs/images/silol-logo.png" width="300">
 
 # wf-renamefastq: A workflow for renaming and demultiplexing FASTQ files
 
