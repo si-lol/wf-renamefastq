@@ -63,6 +63,25 @@
                 }
             }
         },
+        "demultiplex_options": {
+            "title": "Demultiplexing options",
+            "type": "object",
+            "fa_icon": "fas fa-microscope",
+            "description": "Options for demultiplexing.",
+            "properties": {
+                "demultiplex": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Whether or not to demultiplex the input FASTQ file with Dorado",
+                    "help_text": "Specify this parameter if you need to demultiplex the FASTQ file before renaming it with a new name"
+                },
+                "kit_name": {
+                    "type": "string",
+                    "description": "Kit name used for demultiplexing. By default, kit name is 'HLA114-96'",
+                    "default": "HLA114-96"
+                }
+            }
+        },
         "institutional_config_options": {
             "title": "Institutional config options",
             "type": "object",
@@ -271,6 +290,9 @@
         },
         {
             "$ref": "#/definitions/samples_options"
+        },
+        {
+            "$ref": "#/definitions/demultiplex_options"
         },
         {
             "$ref": "#/definitions/institutional_config_options"
