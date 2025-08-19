@@ -30,6 +30,7 @@ The workflow will perform the following:
 1. Checking a comma-separated sample sheet (*.csv) if it is provided.
 2. Demultiplexing when the `--demultiplex` parameter is specified.([Dorado](https://software-docs.nanoporetech.com/dorado/latest))
 3. Renaming FASTQ files and/or concatenating mulitple FASTQ file into a single FASTQ file. ([FASTCAT](https://github.com/epi2me-labs/fastcat))
+4. Computing basic statistics ([Seqkit](https://bioinf.shenwei.me/seqkit/usage))
 
 ## Compute requirements
 
@@ -84,7 +85,7 @@ barcode02,A02
 barcode03,A03
 ```
 > [!IMPORTANT]
-Barcode names have to match with the names of sub-directories in the input directory.
+For renaming, barcode names have to match with the names of sub-directories in the input directory.
 
 ## Usage
 
