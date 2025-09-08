@@ -2,7 +2,7 @@ process DEMULTIPLEX_DORADO {
     tag "$meta.alias"
     label 'process_high'
 
-    container "piroonj/dorado:hla-v1.0.0"
+    container "piroonj/dorado:hla-v1.1.0"
 
     input:
     tuple val(meta), path(fastq_input), val(is_dir), val(kit_name)
