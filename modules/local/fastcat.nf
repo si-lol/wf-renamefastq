@@ -27,7 +27,7 @@ process FASTCAT {
         --histograms ${prefix}-histograms \\
         $args \\
         $fastq_input | \\
-        bgzip > ${prefix}.fastq.gz
+        gzip > ${prefix}.fastq.gz
     
     
     if [ "\$(awk 'NR==1{for (i=1; i<=NF; i++) {ix[\$i] = i}} NR>1 {c+=\$ix["n_seqs"]} END{print c}' ${prefix}_per_file_stats.tsv)" = "0" ]; then
