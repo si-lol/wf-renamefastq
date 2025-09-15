@@ -14,11 +14,11 @@ if (params.sample_sheet) { ch_samplesheet = Channel.fromPath(file(params.sample_
 //
 // MODULE: Loaded from modules/local/
 //
-include { SAMPLESHEET_CHECK                 } from '../modules/local/samplesheet_check'
-include { FASTCAT  as CONCAT_FASTQ          } from '../modules/local/fastcat'
-include { FASTCAT  as RENAME_DEMUX_FASTQ    } from '../modules/local/fastcat'
-include { DEMULTIPLEX_DORADO                } from '../modules/local/demultiplex_dorado'
-include { SEQKIT_STATS                      } from '../modules/local/seqkit_stats'
+include { SAMPLESHEET_CHECK           } from '../modules/local/samplesheet_check'
+include { FASTCAT  as CONCAT_FASTQ    } from '../modules/local/fastcat'
+include { FASTCAT  as RENAME_FASTQ    } from '../modules/local/fastcat'
+include { DEMULTIPLEX_DORADO          } from '../modules/local/demultiplex_dorado'
+include { SEQKIT_STATS                } from '../modules/local/seqkit_stats'
 
 //
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
@@ -112,13 +112,13 @@ workflow RENAMEFASTQ {
             .branch { meta, fastq, num_files ->
                 single: num_files == 1
                     return [ meta, fastq ]
-                multiple: num_files != 1
+                multiple: num_files > 1
                     return [ meta, fastq ]
             }
             .set { ch_fastq_in_topLevelDir }
         
         //
-        // MODULE: FASTCAT, Concatenating multiple FASTQ files into a single FASTQ file (before demultiplexing)
+        // MODULE: FASTCAT, Concatenate multiple FASTQ files into a single FASTQ file
         //
         CONCAT_FASTQ (
             ch_fastq_in_topLevelDir.multiple
@@ -126,22 +126,32 @@ workflow RENAMEFASTQ {
         ch_concat_fastq = CONCAT_FASTQ.out.concat_fastq
         ch_versions     = ch_versions.mix(CONCAT_FASTQ.out.versions)
 
-        if (params.sample_sheet) {
-            ch_fastq_for_demux
-                .mix(ch_fastq_input.singleFile.map { meta, fastq -> [ meta, fastq, false ] })
-                .mix(ch_fastq_in_topLevelDir.single.map { meta, fastq -> [ meta, fastq, true ] })
-                .mix(ch_concat_fastq.map { meta, fastq -> [ meta, fastq, false ] })
-                .map { meta, fastq, is_dir -> [ meta, fastq, is_dir, params.kit_name ] }
-                .set { ch_input_for_demux }
-            
-            DEMULTIPLEX_DORADO (
-                ch_input_for_demux 
-            )
-            ch_demux_fastq = DEMULTIPLEX_DORADO.out.demux_fastq
-            ch_versions    = ch_versions.mix(DEMULTIPLEX_DORADO.out.versions)
+        ch_fastq_for_demux
+            .mix(ch_fastq_input.singleFile.map { meta, fastq -> [ meta, fastq, false ] })
+            .mix(ch_fastq_in_topLevelDir.single.map { meta, fastq -> [ meta, fastq, true ] })
+            .mix(ch_concat_fastq.map { meta, fastq -> [ meta, fastq, false ] })
+            .map { meta, fastq, is_dir -> [ meta, fastq, is_dir, params.kit_name ] }
+            .set { ch_input_for_demux }
 
+        //
+        // MODULE: DORADO, Demultiplex FASTQ file
+        //  
+        DEMULTIPLEX_DORADO (
+            ch_input_for_demux 
+        )
+        ch_demux_fastq = DEMULTIPLEX_DORADO.out.demux_fastq
+        ch_versions    = ch_versions.mix(DEMULTIPLEX_DORADO.out.versions)
+        
+        if (params.sample_sheet) {
             // Separate demultiplexed and unclassified reads to different channels
             ch_demux_fastq
+                .map { meta, fastq -> 
+                    if (fastq instanceof List) {
+                        return [ meta, fastq ]
+                    } else {
+                        return [ meta, [ fastq ] ]
+                    }
+                }
                 .transpose(by: [1])
                 .branch { meta, fastq ->
                     def fq_name = fastq.simpleName
@@ -166,21 +176,15 @@ workflow RENAMEFASTQ {
                 .mix(ch_reads.unclassified)
                 .set { ch_demultiplexed_fastq }
         } else {
-            ch_fastq_for_demux
-                .mix(ch_fastq_input.singleFile.map { meta, fastq -> [ meta, fastq, false ] })
-                .mix(ch_fastq_in_topLevelDir.single.map { meta, fastq -> [ meta, fastq, true ] })
-                .mix(ch_concat_fastq.map { meta, fastq -> [ meta, fastq, false ] })
-                .map { meta, fastq, is_dir -> [ meta, fastq, is_dir, params.kit_name ] }
-                .set { ch_input_for_demux }
-            
-            DEMULTIPLEX_DORADO (
-                ch_input_for_demux
-            )
-            ch_demux_fastq = DEMULTIPLEX_DORADO.out.demux_fastq
-            ch_versions    = ch_versions.mix(DEMULTIPLEX_DORADO.out.versions)
-
             // Create a new meta map for demultiplexed reads
             ch_demux_fastq
+                .map { meta, fastq -> 
+                    if (fastq instanceof List) {
+                        return [ meta, fastq ]
+                    } else {
+                        return [ meta, [ fastq ] ]
+                    }
+                }
                 .transpose(by: [1])
                 .branch { meta, fastq ->
                     def fq_name = fastq.simpleName
@@ -194,7 +198,7 @@ workflow RENAMEFASTQ {
                 }
                 .set { ch_reads }
 
-                ch_demultiplexed_fastq = ch_reads.demultiplexed.mix(ch_reads.unclassified)
+            ch_demultiplexed_fastq = ch_reads.demultiplexed.mix(ch_reads.unclassified)
         }
     }
 
@@ -204,18 +208,18 @@ workflow RENAMEFASTQ {
     ch_fastq_for_fastcat = ch_fastq_for_fastcat.mix(ch_demultiplexed_fastq)
 
     // 
-    // MODULE: FASTCAT, Concatenating multiple FASTQ files into a single FASTQ file (after demultiplexing)
+    // MODULE: FASTCAT, Concatenate/Rename FASTQ files
     // 
-    RENAME_DEMUX_FASTQ (
+    RENAME_FASTQ (
         ch_fastq_for_fastcat
     )
-    ch_concat_demux_fastq  = RENAME_DEMUX_FASTQ.out.concat_fastq
-    ch_versions            = ch_versions.mix(RENAME_DEMUX_FASTQ.out.versions.first())
+    ch_renamed_fastq  = RENAME_FASTQ.out.concat_fastq
+    ch_versions       = ch_versions.mix(RENAME_FASTQ.out.versions.first())
 
     // 
     // MODULE: Seqkit, Computing basic statistics
     // 
-    ch_concat_demux_fastq
+    ch_renamed_fastq
         .map { meta, fastq -> fastq }
         .toList()
         .map { list -> 
