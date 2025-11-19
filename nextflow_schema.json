@@ -33,13 +33,15 @@
                     "description": "Email address for completion summary.",
                     "fa_icon": "fas fa-envelope",
                     "help_text": "Set this parameter to your e-mail address to get a summary e-mail with details of the run sent to you when the workflow exits. If set in your user config file (`~/.nextflow/config`) then you don't need to specify this on the command line for every run.",
-                    "pattern": "^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$"
+                    "pattern": "^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$",
+                    "hidden": true
                 },
                 "multiqc_title": {
                     "hidden": true,
                     "type": "string",
                     "description": "MultiQC report title. Printed as page header, used for filename if not otherwise specified.",
-                    "fa_icon": "fas fa-file-signature"
+                    "fa_icon": "fas fa-file-signature",
+                    "hidden": true
                 }
             }
         },
@@ -62,6 +64,87 @@
                 "sample": {
                     "type": "string",
                     "description": "A single sample name for non-multiplexed data. Permissible if passing a single .fastq(.gz) file or directory of .fastq(.gz) files."
+                }
+            }
+        },
+        "demultiplex_options": {
+            "title": "Demultiplexing options",
+            "type": "object",
+            "fa_icon": "fas fa-microscope",
+            "description": "Parameters for demultiplexing.",
+            "properties": {
+                "demultiplex": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Whether or not to demultiplex the input FASTQ file with Dorado",
+                    "help_text": "Specify this parameter if you need to demultiplex the FASTQ file before renaming it with a new name"
+                },
+                "kit_name": {
+                    "type": "string",
+                    "description": "Kit name used for demultiplexing. By default, kit name is 'BiK-HLA114-96'",
+                    "enum": [ 
+                        "BiK-HLA114-96",
+                        "BiK-16S114-96",
+                        "EXP-NBD103",
+                        "EXP-NBD104",
+                        "EXP-NBD114",
+                        "EXP-NBD114-24",
+                        "EXP-NBD196",
+                        "EXP-PBC001",
+                        "EXP-PBC096",
+                        "SQK-16S024",
+                        "SQK-16S114-24",
+                        "SQK-DRB004-24",
+                        "SQK-LWB001",
+                        "SQK-MAB114-24",
+                        "SQK-MLK111-96-XL",
+                        "SQK-MLK114-96-XL",
+                        "SQK-NBD111-24",
+                        "SQK-NBD111-96",
+                        "SQK-NBD114-24",
+                        "SQK-NBD114-96",
+                        "SQK-PBK004",
+                        "SQK-PCB109",
+                        "SQK-PCB110",
+                        "SQK-PCB111-24",
+                        "SQK-PCB114-24",
+                        "SQK-RAB201",
+                        "SQK-RAB204",
+                        "SQK-RBK001",
+                        "SQK-RBK004",
+                        "SQK-RBK110-96",
+                        "SQK-RBK111-24",
+                        "SQK-RBK111-96",
+                        "SQK-RBK114-24",
+                        "SQK-RBK114-96",
+                        "SQK-RLB001",
+                        "SQK-RPB004",
+                        "SQK-RPB114-24",
+                        "TWIST-16-UDI",
+                        "TWIST-96A-UDI",
+                        "VSK-PTC001",
+                        "VSK-VMK001",
+                        "VSK-VMK004",
+                        "VSK-VPS001" ],
+                    "default": "BiK-HLA114-96"
+                }
+            }
+        },
+        "qc_options": {
+            "title": "QC options",
+            "type": "object",
+            "fa_icon": "fas fa-terminal",
+            "description": "Parameters for read QC",
+            "properties": {
+                "quality_filter": {
+                    "type": "boolean",
+                    "description": "Whether or not to filter reads by Q-score",
+                    "default": true
+                },
+                "q_score": {
+                    "type": "integer",
+                    "description": "Minimun averege Q-score for filtering (By default, Q-score = 14)",
+                    "default": 14
                 }
             }
         },
@@ -274,6 +357,12 @@
         },
         {
             "$ref": "#/definitions/samples_options"
+        },
+        {
+            "$ref": "#/definitions/demultiplex_options"
+        },
+        {
+            "$ref": "#/definitions/qc_options"
         },
         {
             "$ref": "#/definitions/institutional_config_options"
