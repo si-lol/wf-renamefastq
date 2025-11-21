@@ -19,6 +19,8 @@ include { DORADO_DEMULTIPLEX     } from '../modules/local/dorado_demux'
 include { FASTCAT                } from '../modules/local/fastcat'
 include { SEQKIT_SEQ             } from '../modules/local/seqkit_seq'
 include { SEQKIT_STATS           } from '../modules/local/seqkit_stats'
+include { CREATE_BARCODE_DIR     } from '../modules/local/create_barcode_dir'
+
 
 //
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
@@ -118,63 +120,61 @@ workflow RENAMEFASTQ {
         ch_demux_fastq = DORADO_DEMULTIPLEX.out.demux_fastq
         ch_versions    = ch_versions.mix(DORADO_DEMULTIPLEX.out.versions)
 
+        ch_demux_fastq
+            .map { meta, fastq -> 
+                if (fastq instanceof List) {
+                    return [ meta, fastq ]
+                } else {
+                    return [ meta, [ fastq ] ]
+                }
+            }
+            .transpose(by: [1])
+            .map { meta, fastq ->
+                def fq_name = fastq.simpleName
+                def barcode = fq_name.split('_')[-1]
+                def new_meta = meta + [ "barcode": barcode, "demux_name": fq_name ]
+                    return [ barcode, new_meta, fastq ]
+            }
+            .groupTuple(by: [0])
+            .map { barcode, meta_list, fastq_list -> 
+                def new_meta = [ "alias": barcode ]
+                    return [ new_meta, fastq_list ]
+            }
+            .set { ch_demux_barcode }
+        
+        //
+        // Create the directory for each barcode
+        //  
+        CREATE_BARCODE_DIR (
+            ch_demux_barcode
+        )
+        ch_barcode_dir = CREATE_BARCODE_DIR.out.barcode_dir
+        ch_versions    = ch_versions.mix(CREATE_BARCODE_DIR.out.versions)
+
         if (params.sample_sheet) {
             // Separate demultiplexed and unclassified reads to different channels
-            ch_demux_fastq
-                .map { meta, fastq -> 
-                    if (fastq instanceof List) {
-                        return [ meta, fastq ]
-                    } else {
-                        return [ meta, [ fastq ] ]
-                    }
+            ch_barcode_dir
+                .branch { meta, dir ->
+                    def dirname = dir.getName()
+                    demultiplexed: dirname =~ /barcode/
+                        return [ meta, dir ]
+                    unclassified: dirname =~ /unclassified/
+                        return [ meta, dir ]
                 }
-                .transpose(by: [1])
-                .branch { meta, fastq ->
-                    def fq_name = fastq.simpleName
-                    demultiplexed: fq_name =~ /barcode/
-                        def barcode = fq_name.split('_')[-1]
-                        def new_meta = meta + [ "barcode": barcode, "demux_name": fq_name ]
-                        return [ new_meta, fastq ]
-                    unclassified: fq_name =~ /unclassified/
-                        def new_meta = [ "alias": "unclassified", "demux_name": fq_name ]
-                        return [ new_meta, fastq ]
-                }
-                .set { ch_reads }
-        
-            // Map alias to individual FASTQ file based on barcode
-            ch_reads.demultiplexed
-                .map { meta, fastq -> [ meta.barcode, meta, fastq ] }
+                .set { ch_fastq_for_map }
+            
+            // Map alias to individual barcode directories
+            ch_fastq_for_map.demultiplexed
+                .map { meta, dir -> [ meta.alias, meta, dir ] }
                 .join(ch_alias_for_map, by: [0])
-                .map { barcode, meta, fastq, alias ->
-                    def new_meta = [ "alias": alias, "demux_name": meta.demux_name ]
-                    return [ new_meta, fastq ]
+                .map { barcode, meta, dir, alias ->
+                    def new_meta = [ "alias": alias ]
+                    return [ new_meta, dir ]
                 }
-                .mix(ch_reads.unclassified)
+                .mix(ch_fastq_for_map.unclassified)
                 .set { ch_demultiplexed_fastq }
         } else {
-            // Create a new meta map for demultiplexed reads
-            ch_demux_fastq
-                .map { meta, fastq -> 
-                    if (fastq instanceof List) {
-                        return [ meta, fastq ]
-                    } else {
-                        return [ meta, [ fastq ] ]
-                    }
-                }
-                .transpose(by: [1])
-                .branch { meta, fastq ->
-                    def fq_name = fastq.simpleName
-                    demultiplexed: fq_name =~ /barcode/
-                        def alias    = fastq.simpleName.split('_')[-1]
-                        def new_meta = [ "alias": alias, "demux_name": fastq.simpleName ]
-                        return [ new_meta, fastq ]
-                    unclassified: fq_name =~ /unclassified/
-                        def new_meta = [ "alias": "unclassified", "demux_name": fastq.simpleName ]
-                        return [ new_meta, fastq ]
-                }
-                .set { ch_reads }
-
-            ch_demultiplexed_fastq = ch_reads.demultiplexed.mix(ch_reads.unclassified)
+            ch_demultiplexed_fastq = ch_barcode_dir
         }
     }
 
