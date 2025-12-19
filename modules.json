@@ -1,6 +1,6 @@
 {
-    "name": "wf/renamefastq",
-    "homePage": "https://github.com/wf/renamefastq",
+    "name": "si-lol/wf-renamefastq",
+    "homePage": "https://github.com/si-lol/wf-renamefastq",
     "repos": {
         "https://github.com/nf-core/modules.git": {
             "modules": {
