@@ -9,7 +9,7 @@ process SEQKIT_SEQ {
     tuple val(meta), path(fastq), val(q_score)
 
     output:
-    tuple val(meta), path("*_filtered_Q${q_score}.fastq.gz")    , emit: filtered_fastq
+    tuple val(meta), path("*.fastq.gz")                         , emit: filtered_fastq
     path "versions.yml"                                         , emit: versions
 
     when:
@@ -25,7 +25,9 @@ process SEQKIT_SEQ {
         -Q ${q_score} \\
         ${args} \\
         ${fastq} \\
-        | gzip > ${prefix}_filtered_Q${q_score}.fastq.gz
+        | gzip > ${prefix}_temp.fastq.gz
+
+    mv ${prefix}_temp.fastq.gz ${prefix}.fastq.gz
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -36,7 +38,7 @@ process SEQKIT_SEQ {
     stub:
     def prefix = task.ext.prefix ?: "${meta.alias}"
     """
-    touch ${prefix}_filtered_${q_score}.fastq.gz
+    touch ${prefix}.fastq.gz
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
