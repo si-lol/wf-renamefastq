@@ -7,6 +7,7 @@ process FASTCAT {
 
     input:
     tuple val(meta), path(fastq_input)
+    val(post_filter)
 
     output:
     tuple val(meta), path("*.fastq.gz")     , emit: concat_fastq
@@ -20,31 +21,53 @@ process FASTCAT {
     script:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.alias}"
-    """
-    fastcat \\
-        -s ${prefix} \\
-        -f ${prefix}_per_file_stats.tsv \\
-        --histograms ${prefix}-histograms \\
-        $args \\
-        $fastq_input | \\
-        gzip > ${prefix}_concat.fastq.gz
-    
-    
-    if [ "\$(awk 'NR==1{for (i=1; i<=NF; i++) {ix[\$i] = i}} NR>1 {c+=\$ix["n_seqs"]} END{print c}' ${prefix}_per_file_stats.tsv)" = "0" ]; then
-        mv ${prefix}.fastq.gz ${prefix}_empty.fastq.gz
-    fi
+    if (post_filter) {
+        """
+        fastcat \\
+            -s ${prefix} \\
+            -f ${prefix}_per_file_stats.tsv \\
+            --histograms ${prefix}-histograms \\
+            $args \\
+            $fastq_input | \\
+            gzip > ${prefix}_temp.fastq.gz
+        
+        
+        if [ "\$(awk 'NR==1{for (i=1; i<=NF; i++) {ix[\$i] = i}} NR>1 {c+=\$ix["n_seqs"]} END{print c}' ${prefix}_per_file_stats.tsv)" = "0" ]; then
+            mv ${prefix}.fastq.gz ${prefix}_empty.fastq.gz
+        fi
 
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        fastcat: \$(fastcat --version)
-    END_VERSIONS
-    """
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            fastcat: \$(fastcat --version)
+        END_VERSIONS
+        """
+    } else {
+        """
+        fastcat \\
+            -s ${prefix} \\
+            -f ${prefix}_per_file_stats.tsv \\
+            --histograms ${prefix}-histograms \\
+            $args \\
+            $fastq_input | \\
+            gzip > ${prefix}.fastq.gz
+        
+        
+        if [ "\$(awk 'NR==1{for (i=1; i<=NF; i++) {ix[\$i] = i}} NR>1 {c+=\$ix["n_seqs"]} END{print c}' ${prefix}_per_file_stats.tsv)" = "0" ]; then
+            mv ${prefix}.fastq.gz ${prefix}_empty.fastq.gz
+        fi
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            fastcat: \$(fastcat --version)
+        END_VERSIONS
+        """
+    }
 
     stub:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.alias}"
     """
-    touch ${prefix}_concat.fastq.gz
+    touch ${prefix}_temp.fastq.gz
     touch ${prefix}_per_file_stats.tsv
     mkdir ${prefix}-histograms
 

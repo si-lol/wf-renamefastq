@@ -183,19 +183,20 @@ workflow RENAMEFASTQ {
     ch_fastq_for_fastcat = ch_fastq_for_fastcat.mix(ch_not_demultiplexed_fastq)
     ch_fastq_for_fastcat = ch_fastq_for_fastcat.mix(ch_demultiplexed_fastq)
 
-    // 
-    // MODULE: FASTCAT, Concatenate/Rename FASTQ files
-    // 
-    FASTCAT (
-        ch_fastq_for_fastcat
-    )
-    ch_renamed_fastq  = FASTCAT.out.concat_fastq
-    ch_versions       = ch_versions.mix(FASTCAT.out.versions.first())
-
     // Create the input channel for Seqkit stats
     ch_fastq_for_seqkit = Channel.empty()
-
+    
+    // 
+    // MODULE: FASTCAT, Concatenate/Rename FASTQ files
+    //
     if (params.quality_filter) {
+        FASTCAT (
+            ch_fastq_for_fastcat,
+            true
+        )
+        ch_renamed_fastq  = FASTCAT.out.concat_fastq
+        ch_versions       = ch_versions.mix(FASTCAT.out.versions.first())
+        
         ch_renamed_fastq
             .map { meta, fastq -> [ meta, fastq, params.q_score ] }
             .set { ch_fastq_for_filter }
@@ -211,6 +212,13 @@ workflow RENAMEFASTQ {
 
         ch_fastq_for_seqkit = ch_fastq_for_seqkit.mix(ch_filtered_fastq)
     } else {
+        FASTCAT (
+            ch_fastq_for_fastcat,
+            false
+        )
+        ch_renamed_fastq  = FASTCAT.out.concat_fastq
+        ch_versions       = ch_versions.mix(FASTCAT.out.versions.first())
+        
         ch_fastq_for_seqkit = ch_fastq_for_seqkit.mix(ch_renamed_fastq)
     }
 
