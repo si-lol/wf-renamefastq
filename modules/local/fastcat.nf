@@ -27,7 +27,7 @@ process FASTCAT {
         --histograms ${prefix}-histograms \\
         $args \\
         $fastq_input | \\
-        gzip > ${prefix}.fastq.gz
+        gzip > ${prefix}_concat.fastq.gz
     
     
     if [ "\$(awk 'NR==1{for (i=1; i<=NF; i++) {ix[\$i] = i}} NR>1 {c+=\$ix["n_seqs"]} END{print c}' ${prefix}_per_file_stats.tsv)" = "0" ]; then
@@ -44,7 +44,7 @@ process FASTCAT {
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.alias}"
     """
-    touch ${prefix}.fastq.gz
+    touch ${prefix}_concat.fastq.gz
     touch ${prefix}_per_file_stats.tsv
     mkdir ${prefix}-histograms
 

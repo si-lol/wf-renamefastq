@@ -25,9 +25,7 @@ process SEQKIT_SEQ {
         -Q ${q_score} \\
         ${args} \\
         ${fastq} \\
-        | gzip > ${prefix}_temp.fastq.gz
-
-    mv ${prefix}_temp.fastq.gz ${prefix}.fastq.gz
+        | gzip > ${prefix}.fastq.gz
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
